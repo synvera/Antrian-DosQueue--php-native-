@@ -56,7 +56,7 @@ $csrfToken   = getCsrfToken();
         <table>
             <thead>
                 <tr>
-                    <th>No. Urut</th>
+                    <th>No. Antrian</th>
                     <th>Kode Tiket</th>
                     <th>Waktu Ambil</th>
                     <th>Status</th>
@@ -74,7 +74,7 @@ $csrfToken   = getCsrfToken();
         <table>
             <thead>
                 <tr>
-                    <th>No. Urut</th>
+                    <th>No. Antrian</th>
                     <th>Kode Tiket</th>
                     <th>Waktu Ambil</th>
                     <th>Waktu Selesai</th>
@@ -168,7 +168,6 @@ $csrfToken   = getCsrfToken();
                             <button type="button" onclick="ticketAction('complete-ticket.php', ${t.id}, false)">Selesai</button>
                         `;
                     } else if (t.status === 'waiting') {
-                        // Kunci tombol Panggil jika masih ada tiket lain berstatus called
                         const disabledAttr = hasActiveCall ? 'disabled title="Selesaikan tiket yang sedang dipanggil terlebih dahulu"' : '';
                         actionButtons = `
                             <button type="button" onclick="ticketAction('call-ticket.php', ${t.id}, true)" ${disabledAttr}>Panggil</button>
@@ -177,7 +176,7 @@ $csrfToken   = getCsrfToken();
 
                     return `
                         <tr>
-                            <td>${escapeHtml(t.formatted_number)}</td>
+                            <td><strong>${escapeHtml(t.display_code)}</strong></td>
                             <td>${escapeHtml(t.ticket_code)}</td>
                             <td>${escapeHtml(t.created_at)}</td>
                             <td>${escapeHtml(t.status.toUpperCase())}</td>
@@ -197,7 +196,7 @@ $csrfToken   = getCsrfToken();
 
                 tbody.innerHTML = tickets.map(t => `
                     <tr>
-                        <td>${escapeHtml(t.formatted_number)}</td>
+                        <td><strong>${escapeHtml(t.display_code)}</strong></td>
                         <td>${escapeHtml(t.ticket_code)}</td>
                         <td>${escapeHtml(t.created_at)}</td>
                         <td>${escapeHtml(t.completed_at || '-')}</td>
@@ -249,7 +248,6 @@ $csrfToken   = getCsrfToken();
                 }[m]));
             }
 
-            // Muat suara speech synthesis lebih awal
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.getVoices();
             }

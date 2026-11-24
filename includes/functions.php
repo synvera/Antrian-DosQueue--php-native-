@@ -139,6 +139,7 @@ function createQueueTicket(int $waveId): array
         $dateCompact = str_replace('-', '', $serviceDate);
         $formattedSeq = str_pad((string)$nextQueueNumber, 3, '0', STR_PAD_LEFT);
         $ticketCode = sprintf('G%d-%s-%s', $waveId, $dateCompact, $formattedSeq);
+        $displayCode = sprintf('G%d-R%d-%s', $waveId, (int)$assignedRoom['id'], $formattedSeq);
 
         $stmtInsert = $pdo->prepare("
             INSERT INTO tickets (
@@ -165,6 +166,7 @@ function createQueueTicket(int $waveId): array
             'data'    => [
                 'id'               => $ticketId,
                 'ticket_code'      => $ticketCode,
+                'display_code'     => $displayCode,
                 'queue_number'     => $nextQueueNumber,
                 'formatted_number' => $formattedSeq,
                 'service_date'     => $serviceDate,
@@ -225,8 +227,9 @@ function getTicketStatusDetail(string $ticketCode): ?array
         return null;
     }
 
+    // Cari tiket yang sedang dipanggil (called) di ruangan, gelombang, dan tanggal yang sama
     $stmtCurrent = $pdo->prepare("
-        SELECT ticket_code, queue_number 
+        SELECT ticket_code, queue_number, wave_id, room_id 
         FROM tickets 
         WHERE service_date = :service_date 
           AND wave_id = :wave_id 
@@ -242,6 +245,12 @@ function getTicketStatusDetail(string $ticketCode): ?array
         ':room_id'      => (int)$ticket['room_id']
     ]);
     $currentServing = $stmtCurrent->fetch();
+
+    $currentServingShort = null;
+    if ($currentServing) {
+        $currSeq = str_pad((string)$currentServing['queue_number'], 3, '0', STR_PAD_LEFT);
+        $currentServingShort = sprintf('G%d-R%d-%s', $currentServing['wave_id'], $currentServing['room_id'], $currSeq);
+    }
 
     $aheadCount = 0;
     if ($ticket['status'] === 'waiting') {
@@ -264,11 +273,15 @@ function getTicketStatusDetail(string $ticketCode): ?array
         $aheadCount = (int)$stmtAhead->fetchColumn();
     }
 
+    $formattedSeq = str_pad((string)$ticket['queue_number'], 3, '0', STR_PAD_LEFT);
+    $displayCode  = sprintf('G%d-R%d-%s', $ticket['wave_id'], $ticket['room_id'], $formattedSeq);
+
     return [
         'id'               => (int)$ticket['id'],
         'ticket_code'      => $ticket['ticket_code'],
+        'display_code'     => $displayCode,
         'queue_number'     => (int)$ticket['queue_number'],
-        'formatted_number' => str_pad((string)$ticket['queue_number'], 3, '0', STR_PAD_LEFT),
+        'formatted_number' => $formattedSeq,
         'service_date'     => $ticket['service_date'],
         'wave_id'          => (int)$ticket['wave_id'],
         'wave_name'        => $ticket['wave_name'],
@@ -280,7 +293,7 @@ function getTicketStatusDetail(string $ticketCode): ?array
         'created_at'       => $ticket['created_at'],
         'called_at'        => $ticket['called_at'],
         'completed_at'     => $ticket['completed_at'],
-        'current_serving'  => $currentServing ? $currentServing['ticket_code'] : null,
+        'current_serving'  => $currentServingShort,
         'ahead_count'      => $aheadCount
     ];
 }
@@ -289,10 +302,6 @@ function getTicketStatusDetail(string $ticketCode): ?array
 // BAGIAN 2: FUNGSI OPERASIONAL DASHBOARD PETUGAS (TAHAP 5)
 // =====================================================================
 
-/**
- * Mengambil data lengkap dashboard petugas (ringkasan, tiket aktif/menunggu, dan tiket selesai)
- * berdasarkan penugasan yang sah di database.
- */
 function getStaffDashboardData(int $userId, int $waveId, int $roomId, ?string $serviceDate = null): array
 {
     if (!verifyStaffAssignment($userId, $waveId, $roomId)) {
@@ -302,12 +311,13 @@ function getStaffDashboardData(int $userId, int $waveId, int $roomId, ?string $s
     $pdo = getDBConnection();
     $serviceDate = $serviceDate ?? getTodayServiceDate();
 
-    // Ambil seluruh tiket hari ini yang belum diarsipkan (deleted_at IS NULL) sesuai wave & room petugas
     $stmt = $pdo->prepare("
         SELECT 
             t.id,
             t.ticket_code,
             t.queue_number,
+            t.wave_id,
+            t.room_id,
             t.status,
             t.created_at,
             t.called_at,
@@ -331,7 +341,7 @@ function getStaffDashboardData(int $userId, int $waveId, int $roomId, ?string $s
     ]);
     $allTickets = $stmt->fetchAll();
 
-    $activeQueue = []; // Berisi tiket berstatus 'called' dan 'waiting'
+    $activeQueue = [];
     $completedList = [];
     $waitingCount = 0;
     $calledTicket = null;
@@ -340,6 +350,7 @@ function getStaffDashboardData(int $userId, int $waveId, int $roomId, ?string $s
         $row['id']               = (int)$row['id'];
         $row['queue_number']     = (int)$row['queue_number'];
         $row['formatted_number'] = str_pad((string)$row['queue_number'], 3, '0', STR_PAD_LEFT);
+        $row['display_code']     = sprintf('G%d-R%d-%s', $row['wave_id'], $row['room_id'], $row['formatted_number']);
         $row['total_calls']      = (int)$row['total_calls'];
 
         if ($row['status'] === 'called') {
@@ -353,7 +364,6 @@ function getStaffDashboardData(int $userId, int $waveId, int $roomId, ?string $s
         }
     }
 
-    // Urutkan tabel selesai dari yang paling baru selesai
     usort($completedList, static function ($a, $b) {
         return strcmp((string)$b['completed_at'], (string)$a['completed_at']);
     });
@@ -363,24 +373,20 @@ function getStaffDashboardData(int $userId, int $waveId, int $roomId, ?string $s
         'message' => 'Data dashboard berhasil dimuat.',
         'code'    => 200,
         'data'    => [
-            'service_date'   => $serviceDate,
-            'summary'        => [
+            'service_date'      => $serviceDate,
+            'summary'           => [
                 'waiting_count'   => $waitingCount,
                 'called_count'    => $calledTicket ? 1 : 0,
                 'completed_count' => count($completedList),
                 'has_active_call' => ($calledTicket !== null)
             ],
-            'current_called' => $calledTicket,
-            'active_tickets' => $activeQueue,
+            'current_called'    => $calledTicket,
+            'active_tickets'    => $activeQueue,
             'completed_tickets' => $completedList
         ]
     ];
 }
 
-/**
- * Memanggil tiket berstatus 'waiting' menjadi 'called' dan mencatat ke call_logs.
- * Menjamin hanya ada 1 tiket aktif (called) per kombinasi ruangan & gelombang.
- */
 function callQueueTicket(int $userId, int $ticketId): array
 {
     $pdo = getDBConnection();
@@ -388,7 +394,6 @@ function callQueueTicket(int $userId, int $ticketId): array
     try {
         $pdo->beginTransaction();
 
-        // 1. Kunci baris tiket yang akan dipanggil
         $stmtTicket = $pdo->prepare("
             SELECT t.id, t.ticket_code, t.queue_number, t.service_date, t.wave_id, t.room_id, t.status, t.deleted_at,
                    r.room_name, w.wave_name
@@ -406,19 +411,16 @@ function callQueueTicket(int $userId, int $ticketId): array
             return ['success' => false, 'message' => 'Tiket tidak ditemukan.', 'code' => 404];
         }
 
-        // 2. Validasi hak akses penugasan petugas di backend
         if (!verifyStaffAssignment($userId, (int)$ticket['wave_id'], (int)$ticket['room_id'])) {
             $pdo->rollBack();
             return ['success' => false, 'message' => 'Akses ditolak. Anda tidak berwenang memanggil tiket ruangan/gelombang ini.', 'code' => 403];
         }
 
-        // 3. Pastikan tiket masih berstatus waiting
         if ($ticket['status'] !== 'waiting') {
             $pdo->rollBack();
             return ['success' => false, 'message' => 'Tiket tidak dapat dipanggil karena statusnya sudah berubah (' . $ticket['status'] . ').', 'code' => 409];
         }
 
-        // 4. Pastikan tidak ada tiket lain yang sedang berstatus 'called' pada ruangan & gelombang yang sama
         $stmtActiveCheck = $pdo->prepare("
             SELECT id, ticket_code 
             FROM tickets 
@@ -446,7 +448,6 @@ function callQueueTicket(int $userId, int $ticketId): array
             ];
         }
 
-        // 5. Ubah status tiket menjadi 'called'
         $stmtUpdate = $pdo->prepare("
             UPDATE tickets 
             SET status = 'called', called_at = NOW() 
@@ -454,7 +455,6 @@ function callQueueTicket(int $userId, int $ticketId): array
         ");
         $stmtUpdate->execute([':id' => $ticketId]);
 
-        // 6. Catat riwayat pemanggilan ke call_logs
         $stmtLog = $pdo->prepare("
             INSERT INTO call_logs (ticket_id, user_id, called_at, call_number)
             VALUES (:ticket_id, :user_id, NOW(), 1)
@@ -467,15 +467,17 @@ function callQueueTicket(int $userId, int $ticketId): array
         $pdo->commit();
 
         $formattedNum = str_pad((string)$ticket['queue_number'], 3, '0', STR_PAD_LEFT);
-        $speechText   = sprintf('Nomor antrian %s, silakan menuju %s.', $formattedNum, $ticket['room_name']);
+        $displayCode  = sprintf('G%d-R%d-%s', $ticket['wave_id'], $ticket['room_id'], $formattedNum);
+        $speechText   = sprintf('Nomor antrian %s, silakan menuju %s.', $displayCode, $ticket['room_name']);
 
         return [
             'success' => true,
-            'message' => 'Tiket ' . $ticket['ticket_code'] . ' berhasil dipanggil.',
+            'message' => 'Nomor antrian ' . $displayCode . ' berhasil dipanggil.',
             'code'    => 200,
             'data'    => [
                 'ticket_id'        => (int)$ticket['id'],
                 'ticket_code'      => $ticket['ticket_code'],
+                'display_code'     => $displayCode,
                 'formatted_number' => $formattedNum,
                 'room_name'        => $ticket['room_name'],
                 'call_number'      => 1,
@@ -491,9 +493,6 @@ function callQueueTicket(int $userId, int $ticketId): array
     }
 }
 
-/**
- * Melakukan panggil ulang pada tiket yang sedang berstatus 'called' dan mencatat ke call_logs.
- */
 function recallQueueTicket(int $userId, int $ticketId): array
 {
     $pdo = getDBConnection();
@@ -527,7 +526,6 @@ function recallQueueTicket(int $userId, int $ticketId): array
             return ['success' => false, 'message' => 'Hanya tiket yang sedang dipanggil (called) yang dapat dipanggil ulang.', 'code' => 409];
         }
 
-        // Hitung urutan panggilan berikutnya di call_logs
         $stmtCallNum = $pdo->prepare("
             SELECT COALESCE(MAX(call_number), 0) + 1 
             FROM call_logs 
@@ -546,22 +544,23 @@ function recallQueueTicket(int $userId, int $ticketId): array
             ':call_number' => $nextCallNumber
         ]);
 
-        // Perbarui timestamp called_at terbaru
         $stmtUpdate = $pdo->prepare("UPDATE tickets SET called_at = NOW() WHERE id = :id");
         $stmtUpdate->execute([':id' => $ticketId]);
 
         $pdo->commit();
 
         $formattedNum = str_pad((string)$ticket['queue_number'], 3, '0', STR_PAD_LEFT);
-        $speechText   = sprintf('Panggilan ulang. Nomor antrian %s, silakan menuju %s.', $formattedNum, $ticket['room_name']);
+        $displayCode  = sprintf('G%d-R%d-%s', $ticket['wave_id'], $ticket['room_id'], $formattedNum);
+        $speechText   = sprintf('Panggilan ulang. Nomor antrian %s, silakan menuju %s.', $displayCode, $ticket['room_name']);
 
         return [
             'success' => true,
-            'message' => 'Panggil ulang tiket ' . $ticket['ticket_code'] . ' (ke-' . $nextCallNumber . ') berhasil.',
+            'message' => 'Panggil ulang nomor antrian ' . $displayCode . ' (ke-' . $nextCallNumber . ') berhasil.',
             'code'    => 200,
             'data'    => [
                 'ticket_id'        => (int)$ticket['id'],
                 'ticket_code'      => $ticket['ticket_code'],
+                'display_code'     => $displayCode,
                 'formatted_number' => $formattedNum,
                 'room_name'        => $ticket['room_name'],
                 'call_number'      => $nextCallNumber,
@@ -577,9 +576,6 @@ function recallQueueTicket(int $userId, int $ticketId): array
     }
 }
 
-/**
- * Menyelesaikan pelayanan tiket berstatus 'called' menjadi 'completed'.
- */
 function completeQueueTicket(int $userId, int $ticketId): array
 {
     $pdo = getDBConnection();
@@ -635,10 +631,6 @@ function completeQueueTicket(int $userId, int $ticketId): array
     }
 }
 
-/**
- * Mengarsipkan (Soft Delete) tiket yang sudah berstatus 'completed'.
- * Tiket berstatus waiting atau called dilarang dihapus.
- */
 function archiveCompletedTicket(int $userId, int $ticketId): array
 {
     $pdo = getDBConnection();
@@ -694,14 +686,18 @@ function archiveCompletedTicket(int $userId, int $ticketId): array
     }
 }
 
+// =====================================================================
+// BAGIAN 3: KUNCI PERANGKAT GUEST (1 DEVICE = 1 TIKET AKTIF PER HARI)
+// =====================================================================
+
 function bindTicketToGuestDevice(string $ticketCode): void
 {
-    $serviceDate = getTodayServiceDate();$_SESSION['guest_ticket'] = [
+    $serviceDate = getTodayServiceDate();
+    $_SESSION['guest_ticket'] = [
         'code' => $ticketCode,
         'date' => $serviceDate
     ];
 
-    // Cookie bertahan sampai pukul 23:59:59 hari ini agar tetap terkunci meski browser ditutup
     $endOfDay = strtotime('tomorrow') - 1;
     setcookie('guest_ticket_code', $ticketCode, [
         'expires'  => $endOfDay,
@@ -711,9 +707,6 @@ function bindTicketToGuestDevice(string $ticketCode): void
     ]);
 }
 
-/**
- * Menghapus ikatan tiket pada perangkat (dipanggil otomatis jika tiket tidak ditemukan/diarsipkan)
- */
 function clearGuestDeviceTicket(): void
 {
     unset($_SESSION['guest_ticket']);
@@ -725,13 +718,6 @@ function clearGuestDeviceTicket(): void
     ]);
 }
 
-/**
- * Memeriksa apakah perangkat guest ini sudah memiliki tiket sah pada tanggal pelayanan hari ini
- */
-/**
- * Memeriksa apakah perangkat guest ini masih memiliki tiket AKTIF (waiting / called) hari ini.
- * Jika tiket sudah 'completed', kunci perangkat otomatis dilepas agar user bisa mengambil antrian lagi.
- */
 function getActiveGuestDeviceTicket(): ?array
 {
     $today = getTodayServiceDate();
@@ -749,13 +735,11 @@ function getActiveGuestDeviceTicket(): ?array
 
     $ticket = getTicketStatusDetail($savedCode);
 
-    // Jika tiket tidak ditemukan, beda tanggal, atau pelayanannya sudah COMPLETED -> lepas kunci device
     if (!$ticket || $ticket['service_date'] !== $today || $ticket['status'] === 'completed') {
         clearGuestDeviceTicket();
         return null;
     }
 
-    // Sinkronkan ulang ke session jika berasal dari cookie
     $_SESSION['guest_ticket'] = [
         'code' => $ticket['ticket_code'],
         'date' => $today

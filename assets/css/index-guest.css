@@ -1,0 +1,281 @@
+/* =========================================
+   FONT DECLARATIONS
+   ========================================= */
+@font-face {
+    font-family: 'Alte Haas Grotesk';
+    src: url('../fonts/AlteHaasGroteskRegular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Roboto Mono';
+    src: url('../fonts/RobotoMono-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* =========================================
+   RESET & BASE VARIABLES
+   ========================================= */
+:root {
+    --bg-color: #f4f4f2;
+    --text-main: #0f0f0f;
+    --text-muted: #555555;
+    --border-color: #1a1a1a;
+    --dot-green: #2ecc40;
+    --dot-yellow: #ffdc00;
+    --dot-gray: #bcbcbc;
+    --font-display: 'Alte Haas Grotesk', Helvetica, Arial, sans-serif;
+    --font-mono: 'Roboto Mono', monospace;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.5;
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* =========================================
+   LAYOUT CONTAINER
+   ========================================= */
+.wrapped-guest {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 48px 24px 32px;
+    position: relative;
+    z-index: 2;
+}
+
+/* =========================================
+   HEADER SECTION
+   ========================================= */
+.header-guest {
+    margin-bottom: 36px;
+}
+
+.header-guest h1 {
+    font-family: var(--font-display);
+    font-size: clamp(3.4rem, 11vw, 4.4rem);
+    font-weight: 700;
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+    color: var(--text-main);
+    margin-bottom: 14px;
+}
+
+.header-guest .subtitle {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.header-guest .subtitle strong {
+    color: var(--text-main);
+    font-weight: normal;
+}
+
+/* =========================================
+   ALERT & NOTICE
+   ========================================= */
+.alert-box {
+    display: none;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 10px 12px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+    background-color: #eaeae6;
+}
+
+.empty-notice {
+    padding: 14px 0;
+    border-top: 1px solid var(--border-color);
+    font-weight: bold;
+}
+
+/* =========================================
+   WAVES LIST (REFERENSI BATCH ITEMS)
+   ========================================= */
+.waves-list {
+    border-top: 1px solid var(--border-color);
+}
+
+.wave-item {
+    padding: 22px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.wave-row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.wave-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+}
+
+/* Indikator Bulat (Hijau, Kuning, Abu-abu) */
+.status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1px solid var(--text-main);
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.dot-active {
+    background-color: var(--dot-green);
+}
+
+.dot-warning {
+    background-color: var(--dot-yellow);
+}
+
+.dot-inactive {
+    background-color: var(--dot-gray);
+}
+
+.wave-quota {
+    font-size: 14px;
+    letter-spacing: -0.02em;
+}
+
+.wave-row-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.wave-meta p {
+    font-size: 12px;
+    color: var(--text-main);
+    line-height: 1.55;
+}
+
+/* =========================================
+   BUTTONS ([Ambil Tiket] / [Penuh])
+   ========================================= */
+.btn-bracket {
+    background: transparent;
+    border: none;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-main);
+    cursor: pointer;
+    padding: 2px 0;
+    white-space: nowrap;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.btn-bracket:hover:not(:disabled) {
+    text-decoration: underline;
+    opacity: 0.75;
+}
+
+.btn-bracket:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.btn-bracket:disabled {
+    color: var(--text-muted);
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+/* =========================================
+   FOOTNOTE & RE-OPEN TICKET FORM
+   ========================================= */
+.reopen-section {
+    margin-top: 48px;
+}
+
+.footnote {
+    font-size: 10.5px;
+    line-height: 1.45;
+    color: var(--text-main);
+    margin-bottom: 18px;
+    max-width: 92%;
+}
+
+.ticket-lookup {
+    padding-top: 16px;
+    border-top: 1px dashed #999;
+}
+
+.lookup-title {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.lookup-form {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.lookup-form input[type="text"] {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 6px 2px;
+    color: var(--text-main);
+    outline: none;
+}
+
+.lookup-form input[type="text"]::placeholder {
+    color: #999;
+}
+
+.lookup-form input[type="text"]:focus {
+    border-bottom-width: 2px;
+}
+
+/* =========================================
+   WATERMARK TEXT DI BAGIAN BAWAH ("Queue V01")
+   ========================================= */
+.bg-watermark {
+    font-family: var(--font-display);
+    font-size: 78px;
+    font-weight: 900;
+    letter-spacing: -0.06em;
+    margin-top: 40px;
+    color: var(--text-main);
+    text-align: center;
+    white-space: nowrap;
+    user-select: none;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 50%;
+}
