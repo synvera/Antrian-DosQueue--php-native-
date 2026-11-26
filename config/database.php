@@ -7,6 +7,7 @@ function getDBConnection(): PDO
 {
     static $pdo = null;
 
+    // nanti isi ini diubah saja, sesuai dengan "root" bawaan laragon
     if ($pdo === null) {
         $host    = 'localhost';
         $dbName  = 'antrian_db';
