@@ -98,7 +98,7 @@ Pada sisi petugas, dashboard meminta daftar tiket melalui `actions/get-staff-tic
 
 Database menyimpan data agar tiket, kuota, status, dan akses petugas tetap konsisten walaupun halaman dibuka dari perangkat berbeda. Entitas adalah kelompok data yang umumnya diwujudkan sebagai tabel. Atribut adalah kolom pada tabel. Relasi menunjukkan keterkaitan antarbaris tabel, umumnya melalui primary key dan foreign key.
 
-> **Catatan skema:** file `database/antrian_db.sql` pada repository ini masih kosong. Rincian berikut disimpulkan dari nama tabel dan kolom yang dipakai query aplikasi; ini menjelaskan kebutuhan struktur data, bukan bukti bahwa skrip pembuatan tabel sudah tersedia. Pastikan tipe, indeks, constraint, dan foreign key didefinisikan saat skema database disiapkan.
+> **Skema dan data database:** file [`database/antrian_db.sql`](./database/antrian_db.sql) membuat database `antrian_db`, enam tabel yang digunakan aplikasi, indeks dan foreign key, lalu memulihkan data dari ekspor database project. Skrip menjatuhkan dan membuat ulang tabel yang sama; backup database sebelum mengimpornya.
 
 ### Entitas dan atribut
 
@@ -109,7 +109,7 @@ Database menyimpan data agar tiket, kuota, status, dan akses petugas tetap konsi
 | `rooms` | `id`, `room_name`, `is_active` | Daftar ruang pelayanan yang dapat menerima pembagian tiket. |
 | `staff_assignments` | `id`, `user_id`, `wave_id`, `room_id` | Penugasan petugas ke kombinasi gelombang dan ruangan. Kombinasi tersebut digunakan untuk membatasi data yang dapat dikelola petugas. |
 | `tickets` | `id`, `ticket_code`, `queue_number`, `service_date`, `wave_id`, `room_id`, `status`, `created_at`, `called_at`, `completed_at`, `deleted_at` | Satu tiket antrean. `deleted_at` menandai arsip secara soft delete; kolom waktu status mencatat tahapan pelayanan. |
-| `call_logs` | `id`, `ticket_id`, `user_id`, `called_at`, `call_number` | Riwayat pemanggilan tiket, termasuk petugas, waktu, dan nomor pemanggilan. Kolom rinci perlu dicocokkan saat skema dibuat. |
+| `call_logs` | `id`, `ticket_id`, `user_id`, `called_at`, `call_number` | Riwayat pemanggilan tiket, termasuk petugas, waktu, dan nomor pemanggilan. |
 
 `id` pada masing-masing entitas berperan sebagai primary key. Kolom `user_id`, `wave_id`, `room_id`, dan `ticket_id` menjadi foreign key yang menghubungkan record terkait. Nilai status tiket yang dipakai aplikasi adalah `waiting`, `called`, dan `completed`.
 
@@ -146,7 +146,7 @@ Dengan demikian, `staff_assignments` menghubungkan petugas, gelombang, dan ruang
 | `includes/functions.php` | Fungsi pemrosesan dan aturan antrean. |
 | `includes/auth.php`, `includes/csrf.php`, `includes/helpers.php` | Autentikasi, perlindungan CSRF, dan fungsi bantuan. |
 | `config/app.php`, `config/database.php` | Konfigurasi aplikasi dan koneksi database. |
-| `database/antrian_db.sql` | Tempat skrip skema database; saat ini belum berisi skema. |
+| `database/antrian_db.sql` | Skrip untuk membuat database dan memulihkan tabel beserta data ekspor DosQueue. |
 | `assets/` | CSS, ikon, font, dan aset halaman. |
 
 ## Teknologi dan Perlindungan

@@ -65,110 +65,19 @@ touch petugas/login.php petugas/dashboard.php petugas/logout.php
 
 ## Tahap 3 — Buat database dan data awal
 
-Buat database bernama `antrian_db`, kemudian siapkan tabel yang dibutuhkan oleh kode aplikasi. Berkas `database/antrian_db.sql` pada proyek saat ini masih kosong, jadi skema belum dapat dibuat hanya dengan mengimpor berkas tersebut.
+File [`database/antrian_db.sql`](./database/antrian_db.sql) menggabungkan struktur tabel dengan data dari ekspor database DosQueue. File ini membuat database `antrian_db`, lalu menjatuhkan dan membuat ulang tabel `call_logs`, `rooms`, `staff_assignments`, `tickets`, `users`, dan `waves` sebelum mengisi data ekspor, termasuk gelombang, ruangan, akun, penugasan, tiket, serta riwayat panggilan.
 
-Contoh skema awal yang sesuai dengan nama tabel dan kolom yang dipakai aplikasi:
+**Penting:** impor file ini hanya pada database kosong atau setelah membuat backup. Baris `DROP TABLE` akan menghapus data pada tabel dengan nama yang sama sebelum dipulihkan dari dump. Jangan mengimpor ulang ke database yang berisi data baru tanpa backup.
 
-```sql
-CREATE DATABASE antrian_db
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-USE antrian_db;
+Role yang dikenali untuk dashboard adalah `petugas` dan `admin`. File ekspor membawa hash password akun yang ada; untuk penggunaan nyata, atur ulang password akun setelah impor.
 
-CREATE TABLE users (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(120) NOT NULL,
-    username VARCHAR(80) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    role VARCHAR(20) NOT NULL,
-    is_active TINYINT(1) NOT NULL DEFAULT 1
-) ENGINE=InnoDB;
-
-CREATE TABLE waves (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    wave_name VARCHAR(100) NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    quota INT UNSIGNED NOT NULL DEFAULT 0,
-    is_active TINYINT(1) NOT NULL DEFAULT 1
-) ENGINE=InnoDB;
-
-CREATE TABLE rooms (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    room_name VARCHAR(100) NOT NULL,
-    is_active TINYINT(1) NOT NULL DEFAULT 1
-) ENGINE=InnoDB;
-
-CREATE TABLE staff_assignments (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT UNSIGNED NOT NULL,
-    wave_id BIGINT UNSIGNED NOT NULL,
-    room_id BIGINT UNSIGNED NOT NULL,
-    is_active TINYINT(1) NOT NULL DEFAULT 1,
-    INDEX idx_assignment_user (user_id, is_active),
-    CONSTRAINT fk_assignment_user FOREIGN KEY (user_id) REFERENCES users(id),
-    CONSTRAINT fk_assignment_wave FOREIGN KEY (wave_id) REFERENCES waves(id),
-    CONSTRAINT fk_assignment_room FOREIGN KEY (room_id) REFERENCES rooms(id)
-) ENGINE=InnoDB;
-
-CREATE TABLE tickets (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    ticket_code VARCHAR(80) NOT NULL UNIQUE,
-    queue_number INT UNSIGNED NOT NULL,
-    service_date DATE NOT NULL,
-    wave_id BIGINT UNSIGNED NOT NULL,
-    room_id BIGINT UNSIGNED NOT NULL,
-    status ENUM('waiting', 'called', 'completed') NOT NULL DEFAULT 'waiting',
-    created_at DATETIME NOT NULL,
-    called_at DATETIME NULL,
-    completed_at DATETIME NULL,
-    deleted_at DATETIME NULL,
-    UNIQUE KEY uq_ticket_sequence (service_date, wave_id, queue_number),
-    INDEX idx_ticket_staff (service_date, wave_id, room_id, status, deleted_at),
-    CONSTRAINT fk_ticket_wave FOREIGN KEY (wave_id) REFERENCES waves(id),
-    CONSTRAINT fk_ticket_room FOREIGN KEY (room_id) REFERENCES rooms(id)
-) ENGINE=InnoDB;
-
-CREATE TABLE call_logs (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    ticket_id BIGINT UNSIGNED NOT NULL,
-    user_id BIGINT UNSIGNED NOT NULL,
-    called_at DATETIME NOT NULL,
-    call_number INT UNSIGNED NOT NULL,
-    INDEX idx_call_ticket (ticket_id, call_number),
-    CONSTRAINT fk_call_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id),
-    CONSTRAINT fk_call_user FOREIGN KEY (user_id) REFERENCES users(id)
-) ENGINE=InnoDB;
-```
-
-Skema ini merupakan titik awal yang mengikuti query aplikasi; tinjau dan sesuaikan sebelum dipakai di produksi. Simpan SQL tersebut ke `database/antrian_db.sql` agar pembuatan database dapat diulang. Sesudah tabel dibuat, isi data master berupa gelombang, ruangan, akun petugas, dan baris penugasan `staff_assignments` yang aktif. Role yang dikenali untuk dashboard adalah `petugas` dan `admin`.
-
-Password akun harus disimpan sebagai hash yang dihasilkan `password_hash()` PHP, bukan teks biasa. Contoh membuat hash lewat terminal:
+Password baru harus disimpan sebagai hash yang dihasilkan `password_hash()` PHP, bukan teks biasa. Contoh membuat hash lewat terminal:
 
 ```sh
 php -r '$password = readline("Password petugas: "); echo password_hash($password, PASSWORD_DEFAULT), PHP_EOL;'
 ```
 
-Masukkan hasil hash tersebut ke kolom `users.password`, lalu buat penugasan untuk kombinasi petugas, gelombang, dan ruangan yang memang boleh diakses. Pastikan ID penugasan merujuk ke akun, gelombang, dan ruangan yang benar.
-
-Tambahkan gelombang, ruangan, akun, lalu penugasan setelah tabel tersedia. Ganti nilai contoh dan hash dengan data milik Anda:
-
-```sql
-INSERT INTO waves (wave_name, start_time, end_time, quota, is_active)
-VALUES ('Gelombang 1', '08:00:00', '10:00:00', 100, 1);
-
-INSERT INTO rooms (room_name, is_active)
-VALUES ('Ruang 1', 1), ('Ruang 2', 1);
-
--- Isi <HASH_PASSWORD> dengan keluaran password_hash() dari PHP.
-INSERT INTO users (name, username, password, role, is_active)
-VALUES ('Petugas Satu', 'petugas1', '<HASH_PASSWORD>', 'petugas', 1);
-
-INSERT INTO staff_assignments (user_id, wave_id, room_id, is_active)
-VALUES (1, 1, 1, 1), (1, 1, 2, 1);
-```
-
-Sesuaikan ID pada penugasan dengan ID sebenarnya di database. Contoh ini memberi petugas akses ke dua ruangan pada gelombang yang sama.
+Masukkan hash baru ke kolom `users.password` akun yang akan diatur ulang. Data gelombang, ruangan, akun, dan penugasan dari ekspor sudah tersedia; tambahkan atau ubah data tersebut sesuai kebutuhan operasional.
 
 ## Tahap 4 — Hubungkan aplikasi dengan database
 
