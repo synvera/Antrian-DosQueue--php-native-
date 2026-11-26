@@ -8,7 +8,7 @@ Dokumen ini menjelaskan alasan pembuatan DosQueue, cara kerja API pada PHP nativ
 
 Pengelolaan antrean secara manual dapat membuat pengunjung harus bertanya langsung kepada petugas untuk mengetahui giliran, sementara petugas perlu mencatat dan memanggil nomor secara berulang. Cara tersebut berisiko menimbulkan antrean yang sulit dipantau, nomor terlewat atau tercatat ganda, serta informasi status yang tidak segera diketahui pengunjung. Pengaturan jumlah layanan per sesi dan pembagian pengunjung ke beberapa ruangan juga lebih sulit jika hanya mengandalkan pencatatan manual.
 
-DosQueue dibuat sebagai website antrean untuk menata proses tersebut dalam satu sistem. Pengunjung dapat melihat gelombang yang tersedia, mengambil tiket, dan memantau statusnya melalui perangkat. Petugas dapat melihat antrean sesuai penugasannya, memanggil atau memanggil ulang tiket, menyelesaikan pelayanan, dan mengarsipkan tiket yang selesai.
+DosQueue dibuat sebagai website antrean untuk menata proses tersebut dalam satu sistem. Pengunjung dapat melihat gelombang yang tersedia, mengambil tiket, dan memantau statusnya melalui perangkat. Petugas dapat melihat antrean sesuai penugasannya, memanggil atau memanggil ulang tiket, menyelesaikan pelayanan, lalu melihat dan mengarsipkan tiket selesai pada halaman Riwayat Antrian.
 
 ### Tujuan dan ruang lingkup
 
@@ -141,7 +141,7 @@ Dengan demikian, `staff_assignments` menghubungkan petugas, gelombang, dan ruang
 |---|---|
 | `index.php` | Halaman awal/pengarah pengunjung. |
 | `user/` | Halaman pilihan gelombang dan hasil tiket. |
-| `petugas/` | Login, dashboard, dan logout petugas. |
+| `petugas/` | Login, dashboard operasional, riwayat antrian tiket selesai, dan logout petugas. |
 | `actions/` | Endpoint API berbasis file PHP. |
 | `includes/functions.php` | Fungsi pemrosesan dan aturan antrean. |
 | `includes/auth.php`, `includes/csrf.php`, `includes/helpers.php` | Autentikasi, perlindungan CSRF, dan fungsi bantuan. |
@@ -158,5 +158,3 @@ Dengan demikian, `staff_assignments` menghubungkan petugas, gelombang, dan ruang
 - Token CSRF untuk request yang mengubah data; `password_verify()` untuk memeriksa hash kata sandi.
 - Pemeriksaan role, penugasan, status tiket, kuota, dan transaksi dilakukan di server.
 - Web Speech API dipakai browser untuk membacakan panggilan jika didukung perangkat.
-
-Untuk panduan menyiapkan dan menjalankan salinan project, lihat [Panduan Pembuatan Project](./PANDUAN-PEMBUATAN-PROJECT.md). Untuk acuan rancangan dashboard, lihat [Brief Desain Petugas](./PETUGAS-DESIGN-BRIEF.md).

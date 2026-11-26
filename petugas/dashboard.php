@@ -38,10 +38,10 @@ $csrfToken   = getCsrfToken();
                 <span>Dashboard</span>
             </button>
 
-            <button type="button" class="nav-item" data-target="view-history" onclick="switchTab('view-history', this)">
+            <a href="riwayat-antrian.php" class="nav-item">
                 <img src="../assets/icons/clock.svg" alt="Riwayat Antrian" class="icon-svg">
                 <span>Riwayat Antrian</span>
-            </button>
+            </a>
 
             <button type="button" class="nav-item" data-target="view-settings" onclick="switchTab('view-settings', this)">
                 <img src="../assets/icons/setting.svg" alt="Pengaturan" class="icon-svg">
@@ -164,44 +164,10 @@ $csrfToken   = getCsrfToken();
                     </div>
                 </div>
 
-                <!-- TABEL 2: TIKET SELESAI -->
-                <div class="table-container">
-                    <div class="table-header">
-                        <h3>2. Tiket Selesai (Completed)</h3>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>No. Antrian</th>
-                                    <th>Kode Tiket</th>
-                                    <th>Waktu Ambil</th>
-                                    <th>Waktu Selesai</th>
-                                    <th>Status</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-completed">
-                                <tr><td colspan="6" class="text-center">Memuat data...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
             <?php endif; ?>
         </section>
 
-        <!-- VIEW 2: RIWAYAT ANTRIAN (KOSONG + ALERT PENGEMBANGAN) -->
-        <section id="view-history" class="view-section">
-            <div class="dev-alert-box">
-                <img src="../assets/icons/clock.svg" alt="Pengembangan" class="icon-svg icon-lg">
-                <div>
-                    <h4>Informasi Sistem</h4>
-                    <p>Fitur masih dalam tahap pengembangan.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- VIEW 3: PENGATURAN (KOSONG + ALERT PENGEMBANGAN) -->
+        <!-- VIEW 2: PENGATURAN (KOSONG + ALERT PENGEMBANGAN) -->
         <section id="view-settings" class="view-section">
             <div class="dev-alert-box">
                 <img src="../assets/icons/setting.svg" alt="Pengembangan" class="icon-svg icon-lg">
@@ -225,12 +191,11 @@ $csrfToken   = getCsrfToken();
 
         const titles = {
             'view-dashboard': 'Dashboard Operasional',
-            'view-history': 'Riwayat Antrian',
             'view-settings': 'Pengaturan Sistem'
         };
         document.getElementById('topbar-title').textContent = titles[targetId] || 'Dashboard';
 
-        if (targetId === 'view-history' || targetId === 'view-settings') {
+        if (targetId === 'view-settings') {
             alert('Fitur masih dalam tahap pengembangan');
         }
     }
@@ -302,7 +267,6 @@ $csrfToken   = getCsrfToken();
             document.getElementById('sum-completed').textContent = d.summary.completed_count;
 
             renderActiveTable(d.active_tickets, d.summary.has_active_call);
-            renderCompletedTable(d.completed_tickets);
         } catch (err) {
             console.error('Error memuat data dashboard:', err);
         }
@@ -356,30 +320,6 @@ $csrfToken   = getCsrfToken();
         }).join('');
     }
 
-    function renderCompletedTable(tickets) {
-        const tbody = document.getElementById('tbody-completed');
-        if (!tickets.length) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Belum ada tiket yang selesai pada sesi ini.</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = tickets.map(t => `
-            <tr class="row-completed">
-                <td><span class="queue-number">${escapeHtml(t.display_code)}</span></td>
-                <td><code>${escapeHtml(t.ticket_code)}</code></td>
-                <td>${escapeHtml(t.created_at)}</td>
-                <td>${escapeHtml(t.completed_at || '-')}</td>
-                <td><span class="badge badge-completed">${escapeHtml(t.status.toUpperCase())}</span></td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-outline" onclick="archiveTicket(${t.id})">
-                        <img src="../assets/icons/delete.svg" alt="" class="icon-svg icon-xs">
-                        <span>Arsipkan</span>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-    }
-
     async function ticketAction(endpoint, ticketId, shouldSpeak) {
         const formData = new FormData();
         formData.append('ticket_id', ticketId);
@@ -405,13 +345,6 @@ $csrfToken   = getCsrfToken();
         } catch (err) {
             showMsg('Terjadi gangguan koneksi saat mengirim perintah.');
         }
-    }
-
-    async function archiveTicket(ticketId) {
-        if (!confirm('Arsipkan tiket yang sudah selesai ini dari daftar operasional?')) {
-            return;
-        }
-        await ticketAction('delete-ticket.php', ticketId, false);
     }
 
     function escapeHtml(str) {

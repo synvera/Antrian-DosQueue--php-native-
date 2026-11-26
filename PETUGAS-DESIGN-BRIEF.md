@@ -55,7 +55,11 @@ Aksi berdasarkan status:
 - Tombol **Panggil** dinonaktifkan jika masih ada tiket lain yang berstatus *Called*.
 - Saat tiket dipanggil, nomor antrean dibacakan melalui fitur suara browser jika tersedia.
 
-#### Tabel tiket selesai
+### Riwayat Antrian Petugas — `petugas/riwayat-antrian.php`
+
+Dashboard hanya menampilkan tiket aktif dan menunggu. Jumlah tiket selesai tetap ditampilkan dalam ringkasan, sedangkan daftar tiket selesai berada pada halaman terpisah **Riwayat Antrian** (`petugas/riwayat-antrian.php`) yang dapat dibuka melalui sidebar.
+
+Halaman ini hanya dapat dibuka setelah petugas login. Gunakan tema, profil petugas, dan sidebar yang sama dengan dashboard, dengan menu **Riwayat Antrian** dalam keadaan aktif. Sediakan tautan kembali ke Dashboard serta pilihan penugasan gelombang dan ruangan.
 
 Kolom:
 
@@ -64,21 +68,18 @@ Kolom:
 - Waktu tiket diambil.
 - Waktu selesai.
 - Status.
-- Aksi **Arsipkan / Hapus**.
+- Aksi **Arsipkan**.
 
-Aksi arsip meminta konfirmasi terlebih dahulu.
+Daftar hanya menampilkan tiket selesai untuk penugasan yang dipilih dan tanggal layanan aktif, diperbarui otomatis setiap 4 detik, dan menyediakan refresh manual. Aksi arsip meminta konfirmasi terlebih dahulu dan mengarsipkan tiket dari daftar.
 
 #### Kondisi dan pembaruan
 
 - Jika petugas tidak memiliki penugasan aktif, tampilkan pesan bahwa belum ada penugasan gelombang/ruangan.
-- Jika tabel tidak memiliki tiket, tampilkan pesan keadaan kosong yang sesuai.
+- Jika tabel antrean aktif atau riwayat tidak memiliki tiket, tampilkan pesan keadaan kosong yang sesuai.
 - Data dashboard diperbarui otomatis setiap 4 detik.
+- Data riwayat diperbarui otomatis setiap 4 detik.
 - Jika sesi login kedaluwarsa, petugas diarahkan kembali ke halaman login.
 
 ### Logout — `petugas/logout.php`
 
 Mengakhiri sesi petugas dan mengarahkan pengguna kembali ke halaman login.
-
-## Arahan untuk jawaban
-
-Jelaskan usulan desain dalam bahasa Indonesia. Prioritaskan dashboard untuk penggunaan operasional yang cepat dan mudah dibaca petugas. Sertakan struktur/layout yang disarankan, hierarki visual, komponen penting, serta cara menampilkan status dan aksi tiket. Pastikan seluruh fitur dan kondisi yang disebutkan di atas tetap terwakili.

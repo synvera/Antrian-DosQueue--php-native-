@@ -38,7 +38,7 @@ Tentukan tiga status tiket: `waiting` (menunggu), `called` (sedang dipanggil), d
 3. Halaman hasil tiket memantau status tiket secara berkala.
 4. Petugas yang sudah login melihat tiket sesuai penugasan gelombang dan ruangannya.
 5. Petugas memanggil tiket, dapat memanggil ulang, lalu menandai pelayanan selesai.
-6. Tiket selesai dapat diarsipkan dari daftar operasional.
+6. Setelah pelayanan ditandai selesai, tiket muncul pada halaman Riwayat Antrian dan dapat diarsipkan dari sana.
 
 Sebelum menulis kode, gambar alur tersebut di atas kertas dan tetapkan tiga status tiket (`waiting`, `called`, `completed`). Siapkan kerangka folder berikut agar halaman, endpoint, konfigurasi, dan aturan bisnis tidak tercampur:
 
@@ -60,7 +60,7 @@ git init
 touch config/app.php config/database.php
 touch includes/helpers.php includes/csrf.php includes/auth.php includes/functions.php
 touch user/index.php user/ticket-result.php
-touch petugas/login.php petugas/dashboard.php petugas/logout.php
+touch petugas/login.php petugas/dashboard.php petugas/riwayat-antrian.php petugas/logout.php
 ```
 
 ## Tahap 3 — Buat database dan data awal
@@ -444,10 +444,11 @@ const polling = setInterval(refreshTicket, 4000);
 
 1. Buat `petugas/login.php` dan lindungi `petugas/dashboard.php` dengan autentikasi.
 2. Tampilkan identitas akun dan daftar penugasan aktif petugas.
-3. Sediakan pilihan gelombang/ruangan, ringkasan status, tabel tiket aktif, tabel tiket selesai, refresh manual, dan tes suara.
-4. Tampilkan aksi sesuai status: `Panggil` untuk `waiting`; `Panggil Ulang` dan `Selesai` untuk `called`; arsipkan hanya tiket `completed`.
+3. Pada dashboard, sediakan pilihan gelombang/ruangan, ringkasan status, tabel tiket aktif, refresh manual, dan tes suara. Ringkasan tetap menghitung tiket selesai.
+4. Tampilkan aksi sesuai status: `Panggil` untuk `waiting`; `Panggil Ulang` dan `Selesai` untuk `called`.
 5. Setelah panggilan berhasil, bacakan nomor antrean dengan Web Speech API bila browser mendukungnya.
-6. Buat `petugas/logout.php` untuk mengakhiri session.
+6. Buat `petugas/riwayat-antrian.php` dengan tema dan sidebar yang sama untuk menampilkan daftar tiket `completed` pada penugasan dan tanggal layanan aktif. Sediakan refresh manual/otomatis dan aksi arsip dengan konfirmasi.
+7. Buat `petugas/logout.php` untuk mengakhiri session.
 
 Form login sederhana mengirim username/password melalui POST, sedangkan halaman dashboard wajib memeriksa session sebelum menampilkan data:
 
@@ -556,8 +557,8 @@ Pastikan kredensial database sudah tersedia untuk proses PHP sebelum membuka hal
 - Halaman hasil memperbarui status; jumlah antrean di depan berkurang saat tiket lain dipanggil atau selesai.
 - Login petugas berhasil, dan petugas hanya dapat membaca serta mengubah tiket dari penugasannya.
 - Satu tiket yang sedang dipanggil harus diselesaikan sebelum tiket berikutnya dapat dipanggil.
-- Panggil ulang menambah catatan/jumlah panggilan; aksi selesai memindahkan tiket ke daftar selesai.
-- Arsip meminta konfirmasi dan menyembunyikan tiket dari daftar operasional tanpa menghapus barisnya secara permanen.
+- Panggil ulang menambah catatan/jumlah panggilan; aksi selesai membuat tiket tampil pada halaman Riwayat Antrian.
+- Dari Riwayat Antrian, arsip meminta konfirmasi dan menyembunyikan tiket dari daftar riwayat tanpa menghapus barisnya secara permanen.
 - Uji pembacaan suara di browser/perangkat yang akan dipakai; fitur suara bergantung pada dukungan browser dan pengaturan audio.
 
 ## Tahap 12 — Siapkan untuk penggunaan nyata
