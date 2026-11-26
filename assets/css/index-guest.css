@@ -44,11 +44,12 @@ body {
     font-family: var(--font-mono);
     font-size: 13px;
     line-height: 1.5;
-    max-height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     overflow-x: hidden;
+    overflow-y: hidden;
     position: relative;
 }
 
@@ -115,6 +116,7 @@ body {
    WAVES LIST (REFERENSI BATCH ITEMS)
    ========================================= */
 .waves-list {
+    margin-top: 100px;
     border-top: 1px solid var(--border-color);
 }
 
@@ -262,15 +264,12 @@ body {
     border-bottom-width: 2px;
 }
 
-/* =========================================
-   WATERMARK TEXT DI BAGIAN BAWAH ("Queue V01")
-   ========================================= */
 .bg-watermark {
     font-family: var(--font-display);
-    font-size: 78px;
+    font-size: 100px;
     font-weight: 900;
     letter-spacing: -0.06em;
-    margin-top: 40px;
+    margin-top: 100px;
     color: var(--text-main);
     text-align: center;
     white-space: nowrap;
@@ -278,4 +277,21 @@ body {
     pointer-events: none;
     overflow: hidden;
     opacity: 50%;
+}
+
+@media (max-width: 400px){
+.bg-watermark {
+    font-family: var(--font-display);
+    font-size: 78px;
+    font-weight: 900;
+    letter-spacing: -0.06em;
+    margin-top: -20px;
+    color: var(--text-main);
+    text-align: center;
+    white-space: nowrap;
+    user-select: none;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 50%;
+}
 }

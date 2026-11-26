@@ -10,8 +10,8 @@ function getDBConnection(): PDO
     if ($pdo === null) {
         $host    = 'localhost';
         $dbName  = 'antrian_db';
-        $dbUser  = 'root';
-        $dbPass  = ''; // Sesuaikan jika MySQL lokal Anda menggunakan password
+        $dbUser  = 'kahfi';
+        $dbPass  = '534412mkh'; // Sesuaikan jika MySQL lokal Anda menggunakan password
         $charset = 'utf8mb4';
 
         $dsn = "mysql:host={$host};dbname={$dbName};charset={$charset}";

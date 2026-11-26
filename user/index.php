@@ -40,7 +40,7 @@ $csrfToken   = getCsrfToken();
     <div class="wrapped-guest">
         <header class="header-guest">
             <h1>Sistem<br>Antrian</h1>
-            <p class="subtitle">Pilih Gelombang Antrian &mdash;</p>
+            <p class="subtitle">Pilih Gelombang Antrian</p>
             <p>Tanggal: <strong><?= e($initialData['service_date']) ?></strong></p>
         </header>
 
