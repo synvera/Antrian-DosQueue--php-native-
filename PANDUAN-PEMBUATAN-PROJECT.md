@@ -434,6 +434,28 @@ jsonResponse(true, 'Tiket berhasil dibuat.', $result, 201);
 
 Jangan menerima `room_id`, status, atau identitas petugas sebagai bukti hak akses dari browser. Server mengambil identitas dari session dan menguji ulang penugasan serta status tiket dari database.
 
+Contoh pola endpoint aksi petugas `actions/call-ticket.php`. Fungsi bisnis `callQueueTicket()` harus memastikan tiket memang berada pada gelombang dan ruangan yang ditugaskan kepada petugas:
+
+```php
+<?php
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/csrf.php';
+
+requireStaffApiAuth();
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    jsonResponse(false, 'Metode tidak diizinkan.', [], 405);
+}
+if (!verifyCsrfToken()) {
+    jsonResponse(false, 'Token keamanan tidak valid.', [], 403);
+}
+$ticketId = filter_input(INPUT_POST, 'ticket_id', FILTER_VALIDATE_INT);
+if (!$ticketId || $ticketId < 1) {
+    jsonResponse(false, 'ID tiket tidak valid.', [], 400);
+}
+$result = callQueueTicket((int)$_SESSION['user_id'], $ticketId);
+jsonResponse($result['success'], $result['message'], $result['data'] ?? [], $result['code'] ?? 200);
+```
+
 ## Tahap 7 — Buat pengalaman pengunjung
 
 Di `user/index.php`, tampilkan gelombang aktif, jam sesi, dan kuota. Saat pengunjung memilih gelombang, kirim `wave_id` ke endpoint pembuatan tiket dan arahkan ke halaman hasil dengan kode tiket.
@@ -481,6 +503,34 @@ async function takeTicket(waveId) {
 
 Saat menampilkan data dari server, escape teks HTML dengan `e()` atau gunakan `textContent` di JavaScript. Jangan memasukkan teks yang belum dipercaya langsung ke `innerHTML`.
 
+Pada halaman hasil tiket, baca kode dari query string dan minta status terbaru secara berkala. Endpoint status harus memvalidasi kode dan memastikan tiket tersebut dapat dilihat oleh perangkat pemiliknya:
+
+```html
+<p>Nomor: <strong id="ticket-number">Memuat...</strong></p>
+<p>Status: <span id="ticket-status">Memuat...</span></p>
+<p>Dipanggil sekarang: <span id="current-number">-</span></p>
+<script>
+const ticketCode = new URLSearchParams(location.search).get('code');
+async function refreshTicket() {
+  if (!ticketCode) return;
+  const url = `../actions/get-ticket-status.php?code=${encodeURIComponent(ticketCode)}`;
+  const response = await fetch(url);
+  const result = await response.json();
+  if (!result.success) return;
+  document.querySelector('#ticket-number').textContent = result.data.display_code;
+  let statusText = result.data.status;
+  document.querySelector('#current-number').textContent = result.data.current_serving ?? '-';
+  if (result.data.status === 'waiting') {
+    statusText += ` (${result.data.ahead_count} antrean di depan)`;
+  }
+  document.querySelector('#ticket-status').textContent = statusText;
+  if (result.data.status === 'completed') clearInterval(polling);
+}
+refreshTicket();
+const polling = setInterval(refreshTicket, 4000);
+</script>
+```
+
 ## Tahap 8 — Buat halaman petugas
 
 1. Buat `petugas/login.php` dan lindungi `petugas/dashboard.php` dengan autentikasi.
@@ -493,9 +543,30 @@ Saat menampilkan data dari server, escape teks HTML dengan `e()` atau gunakan `t
 Form login sederhana mengirim username/password melalui POST, sedangkan halaman dashboard wajib memeriksa session sebelum menampilkan data:
 
 ```php
+<?php
+// Bagian pemrosesan paling atas petugas/login.php
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/csrf.php';
+$errorMessage = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!verifyCsrfToken()) {
+        $errorMessage = 'Token keamanan tidak valid. Muat ulang halaman.';
+    } elseif (attemptLogin((string)($_POST['username'] ?? ''), (string)($_POST['password'] ?? ''))) {
+        header('Location: dashboard.php');
+        exit;
+    } else {
+        $errorMessage = 'Username atau password salah, atau akun tidak aktif.';
+    }
+}
+?>
+```
+
+```php
 <!-- petugas/login.php -->
 <form method="post">
   <?= csrfInput() ?>
+  <?php if ($errorMessage !== ''): ?><p role="alert"><?= e($errorMessage) ?></p><?php endif; ?>
   <label>Username <input name="username" autocomplete="username" required></label>
   <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
   <button type="submit">Masuk</button>
@@ -522,6 +593,13 @@ async function postStaffAction(url, ticketId, csrfToken) {
   const response = await fetch(url, { method: 'POST', body });
   return response.json();
 }
+
+function speakQueueNumber(number) {
+  if (!('speechSynthesis' in window)) return;
+  const utterance = new SpeechSynthesisUtterance(`Nomor antrean ${number}, silakan menuju petugas`);
+  utterance.lang = 'id-ID';
+  window.speechSynthesis.speak(utterance);
+}
 ```
 
 ## Tahap 9 — Tambahkan desain dan interaksi
@@ -543,15 +621,16 @@ button { min-height: 2.75rem; padding: .5rem 1rem; cursor: pointer; }
 
 ## Tahap 10 — Jalankan website secara lokal
 
-Pastikan MySQL/MariaDB berjalan, database dan data master sudah tersedia, serta koneksi PDO di konfigurasi benar. Dari direktori root proyek, jalankan:
+Pastikan MySQL/MariaDB berjalan, database dan data master sudah tersedia, serta environment variable koneksi PDO sudah diisi. Dari direktori root proyek, jalankan perintah yang mengatur kredensial sekaligus menyalakan server:
 
 ```sh
-php -S 127.0.0.1:8000
+DOSQUEUE_DB_HOST=127.0.0.1 DOSQUEUE_DB_NAME=antrian_db \
+DOSQUEUE_DB_USER=root DOSQUEUE_DB_PASS='' php -S 127.0.0.1:8000
 ```
 
 Buka `http://127.0.0.1:8000/`. Jika ada kegagalan koneksi, periksa nama database, user/password lokal, server database, dan ekstensi `pdo_mysql`.
 
-Jika membuat database lewat file SQL, jalankan dari terminal:
+Jika membuat database lewat file SQL, jalankan dari terminal di terminal lain:
 
 ```sh
 mysql -u root -p < database/antrian_db.sql
