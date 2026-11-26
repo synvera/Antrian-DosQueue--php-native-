@@ -1,0 +1,668 @@
+/* ==========================================================================
+   CUSTOM FONTS
+   ========================================================================== */
+@font-face {
+    font-family: 'Alte Haas Grotesk';
+    src: url('../assets/Fonts/AlteHaasGroteskRegular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Roboto Mono';
+    src: url('../assets/Fonts/RobotoMono-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ==========================================================================
+   TEMA: "Clean Monochrome" (Proporsi 60-30-10)
+   ========================================================================== */
+:root {
+    /* 60% Dominan - Latar Belakang Utama */
+    --bg-cream: #F7F7F7;
+    --bg-cream-elevated: #FFFFFF;
+
+    /* 30% Sekunder - Struktur, Card, Sidebar & Tabel */
+    --bg-sand: #EAEAEA;
+    --bg-sand-soft: #F2F2F2;
+
+    /* 10% Aksen - Interaksi & Kontras Tipografi */
+    --accent-sage: #262626;
+    --accent-sage-hover: #404040;
+    --text-on-accent: #FFFFFF;
+
+    --text-olive: #171717;
+    --text-olive-muted: rgba(23, 23, 23, 0.62);
+
+    /* Borders & Shadows */
+    --border-subtle: rgba(23, 23, 23, 0.12);
+    --border-medium: rgba(23, 23, 23, 0.24);
+    --shadow-soft: 0 4px 16px rgba(0, 0, 0, 0.04);
+    --shadow-card: 0 6px 20px rgba(0, 0, 0, 0.07);
+
+    /* Radius & Typography */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --font-alte: 'Alte Haas Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-roboto: 'Roboto Mono', monospace;
+    --transition: all 0.2s ease;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-alte);
+    background-color: var(--bg-cream);
+    color: var(--text-olive);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+button,
+select,
+input {
+    font-family: var(--font-alte);
+}
+
+/* ==========================================================================
+   IKON ASET SVG (Menyesuaikan Warna Hitam Arang #171717)
+   ========================================================================== */
+.icon-svg {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    flex-shrink: 0;
+    display: inline-block;
+    filter: brightness(0) saturate(100%) invert(7%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(92%);
+}
+
+/* Ikon di atas latar gelap (#262626) diubah menjadi putih */
+.brand-icon .icon-svg,
+.staff-avatar .icon-svg,
+.btn-primary .icon-svg {
+    filter: brightness(0) invert(1);
+}
+
+.icon-xs {
+    width: 15px;
+    height: 15px;
+}
+
+.icon-lg {
+    width: 38px;
+    height: 38px;
+}
+
+/* ==========================================================================
+   LAYOUT UTAMA & SIDEBAR
+   ========================================================================== */
+.app-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 260px;
+    background-color: var(--bg-sand);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 16px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    flex-shrink: 0;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 10px 24px;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 20px;
+}
+
+.brand-icon {
+    width: 40px;
+    height: 40px;
+    background-color: var(--accent-sage);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.brand-icon .icon-svg {
+    width: 22px;
+    height: 22px;
+}
+
+.brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-title {
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+}
+
+.brand-sub {
+    font-size: 0.8rem;
+    color: var(--text-olive-muted);
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 14px;
+    background: transparent;
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    color: var(--text-olive);
+    font-size: 0.96rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: var(--transition);
+}
+
+.nav-item:hover {
+    background-color: var(--bg-cream-elevated);
+}
+
+/* State Selected / Active pada Sidebar */
+.nav-item.active {
+    background-color: var(--bg-cream-elevated);
+    border-color: var(--accent-sage);
+    font-weight: 700;
+    box-shadow: var(--shadow-soft);
+}
+
+.sidebar-footer {
+    padding-top: 16px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.btn-logout {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    color: var(--text-olive);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.94rem;
+    transition: var(--transition);
+}
+
+.btn-logout:hover {
+    background-color: rgba(0, 0, 0, 0.07);
+}
+
+/* ==========================================================================
+   KONTEN UTAMA & TOPBAR
+   ========================================================================== */
+.main-content {
+    flex: 1;
+    padding: 28px 36px;
+    max-width: 1280px;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-olive-muted);
+    margin-top: 2px;
+}
+
+.page-subtitle strong {
+    font-family: var(--font-roboto);
+    font-size: 0.86rem;
+}
+
+.staff-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: var(--bg-sand);
+    padding: 8px 16px;
+    border-radius: 50px;
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-soft);
+}
+
+.staff-avatar {
+    width: 34px;
+    height: 34px;
+    background-color: var(--accent-sage);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.staff-avatar .icon-svg {
+    width: 18px;
+    height: 18px;
+}
+
+.staff-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.staff-name {
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.staff-meta {
+    font-family: var(--font-roboto);
+    font-size: 0.75rem;
+    color: var(--text-olive-muted);
+}
+
+/* ==========================================================================
+   VIEW SECTIONS & ALERT PENGEMBANGAN
+   ========================================================================== */
+.view-section {
+    display: none;
+}
+
+.view-section.active {
+    display: block;
+}
+
+.dev-alert-box {
+    background-color: var(--bg-sand);
+    border: 2px solid var(--accent-sage);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    max-width: 560px;
+    box-shadow: var(--shadow-card);
+}
+
+.dev-alert-box h4 {
+    font-size: 1.12rem;
+    margin-bottom: 4px;
+}
+
+.dev-alert-box p {
+    font-size: 0.95rem;
+    color: var(--text-olive-muted);
+}
+
+/* ==========================================================================
+   CARDS, KONTROL & STATISTIK (30% SOFT GRAY)
+   ========================================================================== */
+.card {
+    background-color: var(--bg-sand);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    box-shadow: var(--shadow-soft);
+}
+
+.empty-state-card {
+    text-align: center;
+    padding: 48px 24px;
+}
+
+.empty-state-card .icon-svg {
+    margin-bottom: 12px;
+}
+
+.control-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    flex: 1;
+    min-width: 260px;
+}
+
+.control-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.form-select {
+    width: 100%;
+    padding: 11px 14px;
+    background-color: var(--bg-cream-elevated);
+    color: var(--text-olive);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.form-select:focus {
+    border-color: var(--accent-sage);
+    box-shadow: 0 0 0 3px rgba(38, 38, 38, 0.16);
+}
+
+.control-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.status-banner {
+    background-color: var(--bg-sand-soft);
+    border: 1px solid var(--border-subtle);
+    border-left: 4px solid var(--accent-sage);
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 0.92rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-soft);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* State Selected / Highlight pada Kartu Aktif */
+.stat-card.stat-highlight {
+    border: 2px solid var(--accent-sage);
+    box-shadow: var(--shadow-card);
+}
+
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-olive-muted);
+    margin-bottom: 12px;
+}
+
+.stat-value {
+    font-family: var(--font-roboto);
+    font-size: 2.15rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* ==========================================================================
+   TOMBOL AKSI (10% CHARCOAL & PURE WHITE)
+   ========================================================================== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: var(--transition);
+    color: var(--text-olive);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.84rem;
+    gap: 6px;
+}
+
+.btn-primary {
+    background-color: var(--accent-sage);
+    border-color: var(--accent-sage);
+    color: var(--text-on-accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--accent-sage-hover);
+    border-color: var(--accent-sage-hover);
+}
+
+.btn-secondary {
+    background-color: var(--bg-cream-elevated);
+    border-color: var(--border-medium);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    border-color: var(--accent-sage);
+    background-color: var(--bg-cream);
+}
+
+.btn-outline {
+    background-color: transparent;
+    border-color: var(--border-medium);
+}
+
+.btn-outline:hover:not(:disabled) {
+    background-color: rgba(0, 0, 0, 0.07);
+    border-color: var(--text-olive);
+}
+
+/* State Disabled */
+.btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.btn-group {
+    display: inline-flex;
+    gap: 6px;
+}
+
+/* ==========================================================================
+   TABEL DATA ANTRIAN
+   ========================================================================== */
+.table-container {
+    background-color: var(--bg-sand);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow-card);
+}
+
+.table-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.table-header h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.data-table th {
+    background-color: var(--bg-sand);
+    padding: 13px 20px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid var(--border-medium);
+}
+
+.data-table td {
+    padding: 14px 20px;
+    font-size: 0.92rem;
+    border-bottom: 1px solid var(--border-subtle);
+    background-color: var(--bg-cream-elevated);
+}
+
+/* Striped Rows */
+.data-table tbody tr:nth-child(even) td {
+    background-color: var(--bg-sand-soft);
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Highlight Baris Sedang Dipanggil */
+.data-table tbody tr.row-active td {
+    background-color: rgba(0, 0, 0, 0.07);
+}
+
+/* State Expired / Selesai */
+.data-table tbody tr.row-completed {
+    opacity: 0.65;
+}
+
+/* Tipografi Monospace untuk Nomor, Kode Tiket, Waktu, dan Jumlah Panggilan */
+.queue-number {
+    font-family: var(--font-roboto);
+    font-size: 1.12rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.data-table td code,
+.data-table td:nth-child(3),
+.data-table td:nth-child(5) {
+    font-family: var(--font-roboto);
+    font-size: 0.86rem;
+}
+
+#tbody-completed td:nth-child(4) {
+    font-family: var(--font-roboto);
+    font-size: 0.86rem;
+}
+
+#tbody-completed td:nth-child(5) {
+    font-family: var(--font-alte);
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Badges Status */
+.badge {
+    font-family: var(--font-roboto);
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 50px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+}
+
+.badge-called {
+    background-color: var(--accent-sage);
+    color: var(--text-on-accent);
+}
+
+.badge-waiting {
+    background-color: var(--bg-cream-elevated);
+    color: var(--text-olive);
+    border: 1px solid var(--border-medium);
+}
+
+.badge-completed {
+    background-color: var(--bg-sand);
+    color: var(--text-olive-muted);
+}
+
+/* ==========================================================================
+   RESPONSIVE MOBILE
+   ========================================================================== */
+@media (max-width: 768px) {
+    .app-layout {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: static;
+        padding: 16px;
+    }
+
+    .sidebar-nav {
+        flex-direction: row;
+        overflow-x: auto;
+    }
+
+    .nav-item {
+        white-space: nowrap;
+    }
+
+    .main-content {
+        padding: 20px 16px;
+    }
+}

@@ -1,8 +1,8 @@
-# Panduan Pembuatan DosQueue dari Awal
+# Langkah demi Langkah Membuat Website DosQueue dari Nol
 
-Panduan ini menjelaskan urutan praktis untuk membangun aplikasi antrean seperti DosQueue dari proyek kosong sampai siap diuji. Isinya disusun dari struktur dan perilaku source code yang tersedia saat ini; ini bukan klaim tentang urutan historis penulisan setiap file.
+> Panduan ini menyusun proses pembuatan DosQueue secara berurutan: mulai dari menyiapkan proyek kosong, merancang database dan alur, membuat backend serta halaman, sampai menjalankan dan memeriksa website. Nama file dan perilaku yang disebutkan mengikuti source code DosQueue di repository ini. Jika Anda sedang membangun dari folder kosong, ikuti tahapannya berurutan; jika Anda sudah memiliki source code, gunakan bagian persiapan dan menjalankan aplikasi.
 
-## 1. Siapkan lingkungan
+## Tahap 1 — Siapkan alat kerja
 
 Perangkat yang diperlukan:
 
@@ -11,9 +11,9 @@ Perangkat yang diperlukan:
 - MySQL atau MariaDB yang mendukung transaksi InnoDB.
 - Browser modern. Fitur pembacaan nomor antrean menggunakan Web Speech API browser.
 
-Proyek ini menggunakan PHP native dan tidak memiliki `composer.json` maupun langkah build frontend.
+Proyek ini menggunakan PHP native dan tidak memiliki `composer.json` maupun langkah build frontend. Siapkan editor kode, terminal, dan Git agar perubahan source code dapat disimpan dan ditinjau.
 
-## 2. Rancang alur dan struktur
+## Tahap 2 — Tentukan kebutuhan dan alur website
 
 Tentukan tiga status tiket: `waiting` (menunggu), `called` (sedang dipanggil), dan `completed` (selesai). Alur utamanya:
 
@@ -24,7 +24,7 @@ Tentukan tiga status tiket: `waiting` (menunggu), `called` (sedang dipanggil), d
 5. Petugas memanggil tiket, dapat memanggil ulang, lalu menandai pelayanan selesai.
 6. Tiket selesai dapat diarsipkan dari daftar operasional.
 
-Struktur file yang digunakan:
+Sebelum menulis kode, gambar alur tersebut di atas kertas dan tetapkan tiga status tiket (`waiting`, `called`, `completed`). Siapkan kerangka folder berikut agar halaman, endpoint, konfigurasi, dan aturan bisnis tidak tercampur:
 
 ```text
 actions/       Endpoint JSON untuk tiket dan operasi petugas
@@ -37,7 +37,7 @@ user/          Halaman pilih gelombang dan hasil tiket
 index.php      Pengarah ke halaman pengunjung
 ```
 
-## 3. Buat database
+## Tahap 3 — Buat database dan data awal
 
 Buat database bernama `antrian_db`, kemudian siapkan tabel yang dibutuhkan oleh kode aplikasi. Berkas `database/antrian_db.sql` pada proyek saat ini masih kosong, jadi skema belum dapat dibuat hanya dengan mengimpor berkas tersebut.
 
@@ -115,7 +115,7 @@ CREATE TABLE call_logs (
 ) ENGINE=InnoDB;
 ```
 
-Skema ini merupakan titik awal yang mengikuti query aplikasi; tinjau dan sesuaikan sebelum dipakai di produksi. Siapkan juga data master berupa gelombang, ruangan, akun petugas, dan baris penugasan `staff_assignments` yang aktif. Role yang dikenali untuk dashboard adalah `petugas` dan `admin`.
+Skema ini merupakan titik awal yang mengikuti query aplikasi; tinjau dan sesuaikan sebelum dipakai di produksi. Simpan SQL tersebut ke `database/antrian_db.sql` agar pembuatan database dapat diulang. Sesudah tabel dibuat, isi data master berupa gelombang, ruangan, akun petugas, dan baris penugasan `staff_assignments` yang aktif. Role yang dikenali untuk dashboard adalah `petugas` dan `admin`.
 
 Password akun harus disimpan sebagai hash yang dihasilkan `password_hash()` PHP, bukan teks biasa. Contoh membuat hash lewat terminal:
 
@@ -123,9 +123,9 @@ Password akun harus disimpan sebagai hash yang dihasilkan `password_hash()` PHP,
 php -r '$password = readline("Password petugas: "); echo password_hash($password, PASSWORD_DEFAULT), PHP_EOL;'
 ```
 
-Masukkan hasil hash tersebut ke kolom `users.password`, lalu buat penugasan untuk kombinasi petugas, gelombang, dan ruangan yang memang boleh diakses.
+Masukkan hasil hash tersebut ke kolom `users.password`, lalu buat penugasan untuk kombinasi petugas, gelombang, dan ruangan yang memang boleh diakses. Pastikan ID penugasan merujuk ke akun, gelombang, dan ruangan yang benar.
 
-## 4. Sambungkan konfigurasi dan helper
+## Tahap 4 — Hubungkan aplikasi dengan database
 
 1. Inisialisasi zona waktu dan session di `config/app.php`.
 2. Buat koneksi PDO MySQL di `config/database.php`; aktifkan exception mode, prepared statement native, dan charset `utf8mb4`.
@@ -133,7 +133,7 @@ Masukkan hasil hash tersebut ke kolom `users.password`, lalu buat penugasan untu
 4. Tambahkan helper untuk escaping HTML, redirect, tanggal layanan, dan respons JSON.
 5. Tambahkan CSRF token untuk form dan request perubahan data.
 
-## 5. Bangun autentikasi dan logika inti
+## Tahap 5 — Buat autentikasi dan aturan antrean
 
 Di `includes/auth.php`, implementasikan login memakai `password_verify()`, validasi status akun, regenerasi ID session setelah login, pembatasan halaman/API berdasarkan role, validasi penugasan, serta logout.
 
@@ -150,7 +150,7 @@ Di `includes/functions.php`, pisahkan logika database dari halaman:
 
 Gunakan prepared statements untuk input database dan transaksi untuk operasi yang harus konsisten, khususnya pembuatan dan perubahan status tiket.
 
-## 6. Buat endpoint aplikasi
+## Tahap 6 — Buat endpoint API
 
 Endpoint di folder `actions/` menjadi penghubung halaman dengan logika inti:
 
@@ -160,9 +160,9 @@ Endpoint di folder `actions/` menjadi penghubung halaman dengan logika inti:
 - `call-ticket.php`, `recall-ticket.php`, `complete-ticket.php`, dan `delete-ticket.php` untuk aksi petugas.
 - `release-guest-ticket.php` untuk melepaskan penanda tiket aktif pada perangkat.
 
-Batasi metode HTTP, validasi parameter, dan periksa CSRF pada request POST. Endpoint petugas juga harus memeriksa session serta penugasan, bukan hanya mengandalkan tombol yang ditampilkan di browser.
+Batasi metode HTTP, validasi parameter, dan periksa CSRF pada request POST. Endpoint petugas juga harus memeriksa session serta penugasan, bukan hanya mengandalkan tombol yang ditampilkan di browser. Untuk tiap endpoint, susun alur yang sama: muat konfigurasi/helper, validasi request, panggil fungsi bisnis, tetapkan kode HTTP, lalu keluarkan JSON.
 
-## 7. Buat halaman pengunjung
+## Tahap 7 — Buat pengalaman pengunjung
 
 Di `user/index.php`, tampilkan gelombang aktif, jam sesi, dan kuota. Saat pengunjung memilih gelombang, kirim `wave_id` ke endpoint pembuatan tiket dan arahkan ke halaman hasil dengan kode tiket.
 
@@ -170,7 +170,7 @@ Di `user/ticket-result.php`, tampilkan kode dan status tiket, ruangan, gelombang
 
 `index.php` pada root mengarahkan pengunjung ke halaman pilih gelombang.
 
-## 8. Buat halaman petugas
+## Tahap 8 — Buat halaman petugas
 
 1. Buat `petugas/login.php` dan lindungi `petugas/dashboard.php` dengan autentikasi.
 2. Tampilkan identitas akun dan daftar penugasan aktif petugas.
@@ -179,11 +179,11 @@ Di `user/ticket-result.php`, tampilkan kode dan status tiket, ruangan, gelombang
 5. Setelah panggilan berhasil, bacakan nomor antrean dengan Web Speech API bila browser mendukungnya.
 6. Buat `petugas/logout.php` untuk mengakhiri session.
 
-## 9. Tambahkan gaya dan interaksi
+## Tahap 9 — Tambahkan desain dan interaksi
 
-Gunakan CSS untuk membedakan antrean menunggu, dipanggil, selesai, kuota tersedia, dan kuota penuh. Pastikan tabel dan tombol mudah digunakan saat operasional serta tetap terbaca di layar kecil. Gaya yang ada saat ini berada di `assets/css/index-guest.css` dan `assets/css/ticket-result.css`; dashboard petugas masih berupa HTML dasar.
+Gunakan CSS untuk membedakan antrean menunggu, dipanggil, selesai, kuota tersedia, dan kuota penuh. Pastikan tabel dan tombol mudah digunakan saat operasional serta tetap terbaca di layar kecil. Pisahkan stylesheet berdasarkan halaman, seperti `assets/css/index-guest.css`, `assets/css/ticket-result.css`, `assets/css/login-petugas.css`, dan stylesheet dashboard di `assets/css/`. Letakkan ikon, font, dan gambar di subfolder `assets/` yang sesuai. JavaScript halaman menangani pengambilan data, polling, pesan kesalahan, konfirmasi aksi, dan pembacaan nomor menggunakan Web Speech API.
 
-## 10. Jalankan secara lokal
+## Tahap 10 — Jalankan website secara lokal
 
 Pastikan MySQL/MariaDB berjalan, database dan data master sudah tersedia, serta koneksi PDO di konfigurasi benar. Dari direktori root proyek, jalankan:
 
@@ -193,7 +193,7 @@ php -S 127.0.0.1:8000
 
 Buka `http://127.0.0.1:8000/`. Jika ada kegagalan koneksi, periksa nama database, user/password lokal, server database, dan ekstensi `pdo_mysql`.
 
-## 11. Uji dari awal sampai selesai
+## Tahap 11 — Periksa alur dari awal sampai selesai
 
 - Halaman awal mengarahkan ke pemilihan gelombang; daftar gelombang dan status kuota berhasil dimuat.
 - Tiket dapat dibuat untuk gelombang aktif; kuota penuh atau gelombang nonaktif ditolak oleh server.
@@ -206,6 +206,6 @@ Buka `http://127.0.0.1:8000/`. Jika ada kegagalan koneksi, periksa nama database
 - Arsip meminta konfirmasi dan menyembunyikan tiket dari daftar operasional tanpa menghapus barisnya secara permanen.
 - Uji pembacaan suara di browser/perangkat yang akan dipakai; fitur suara bergantung pada dukungan browser dan pengaturan audio.
 
-## 12. Siapkan untuk penggunaan nyata
+## Tahap 12 — Siapkan untuk penggunaan nyata
 
 Sebelum dipublikasikan, isi skema database yang saat ini kosong, pindahkan rahasia koneksi dari source code ke konfigurasi lingkungan yang tidak dipublikasikan, gunakan HTTPS, buat akun dan penugasan resmi, serta uji skenario bersamaan dan pencadangan database. Jangan menganggap server PHP bawaan cocok sebagai server produksi.

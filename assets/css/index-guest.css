@@ -3,7 +3,7 @@
    ========================================= */
 @font-face {
     font-family: 'Alte Haas Grotesk';
-    src: url('../fonts/AlteHaasGroteskRegular.ttf') format('truetype');
+    src: url('../assets/Fonts/AlteHaasGroteskRegular.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
@@ -11,7 +11,7 @@
 
 @font-face {
     font-family: 'Roboto Mono';
-    src: url('../fonts/RobotoMono-Regular.ttf') format('truetype');
+    src: url('../assets/Fonts/RobotoMono-Regular.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
     font-display: swap;
