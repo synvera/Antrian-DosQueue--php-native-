@@ -13,6 +13,22 @@ Perangkat yang diperlukan:
 
 Proyek ini menggunakan PHP native dan tidak memiliki `composer.json` maupun langkah build frontend. Siapkan editor kode, terminal, dan Git agar perubahan source code dapat disimpan dan ditinjau.
 
+Periksa instalasi PHP dan ekstensi database dari terminal:
+
+```sh
+php -v
+php -m
+```
+
+Pastikan daftar modul memuat `PDO` dan `pdo_mysql`. Buat proyek serta direktori awal jika memulai dari folder kosong:
+
+```sh
+mkdir dosqueue
+cd dosqueue
+mkdir -p actions assets/css assets/icons assets/images assets/Fonts config database includes petugas user
+touch index.php
+```
+
 ## Tahap 2 — Tentukan kebutuhan dan alur website
 
 Tentukan tiga status tiket: `waiting` (menunggu), `called` (sedang dipanggil), dan `completed` (selesai). Alur utamanya:
@@ -35,6 +51,16 @@ includes/      Autentikasi, CSRF, helper, dan logika antrean
 petugas/       Login, dashboard, dan logout
 user/          Halaman pilih gelombang dan hasil tiket
 index.php      Pengarah ke halaman pengunjung
+```
+
+Untuk memulai Git dan mencatat kerangka proyek:
+
+```sh
+git init
+touch config/app.php config/database.php
+touch includes/helpers.php includes/csrf.php includes/auth.php includes/functions.php
+touch user/index.php user/ticket-result.php
+touch petugas/login.php petugas/dashboard.php petugas/logout.php
 ```
 
 ## Tahap 3 — Buat database dan data awal
@@ -125,13 +151,137 @@ php -r '$password = readline("Password petugas: "); echo password_hash($password
 
 Masukkan hasil hash tersebut ke kolom `users.password`, lalu buat penugasan untuk kombinasi petugas, gelombang, dan ruangan yang memang boleh diakses. Pastikan ID penugasan merujuk ke akun, gelombang, dan ruangan yang benar.
 
+Tambahkan gelombang, ruangan, akun, lalu penugasan setelah tabel tersedia. Ganti nilai contoh dan hash dengan data milik Anda:
+
+```sql
+INSERT INTO waves (wave_name, start_time, end_time, quota, is_active)
+VALUES ('Gelombang 1', '08:00:00', '10:00:00', 100, 1);
+
+INSERT INTO rooms (room_name, is_active)
+VALUES ('Ruang 1', 1), ('Ruang 2', 1);
+
+-- Isi <HASH_PASSWORD> dengan keluaran password_hash() dari PHP.
+INSERT INTO users (name, username, password, role, is_active)
+VALUES ('Petugas Satu', 'petugas1', '<HASH_PASSWORD>', 'petugas', 1);
+
+INSERT INTO staff_assignments (user_id, wave_id, room_id, is_active)
+VALUES (1, 1, 1, 1), (1, 1, 2, 1);
+```
+
+Sesuaikan ID pada penugasan dengan ID sebenarnya di database. Contoh ini memberi petugas akses ke dua ruangan pada gelombang yang sama.
+
 ## Tahap 4 — Hubungkan aplikasi dengan database
 
 1. Inisialisasi zona waktu dan session di `config/app.php`.
 2. Buat koneksi PDO MySQL di `config/database.php`; aktifkan exception mode, prepared statement native, dan charset `utf8mb4`.
-3. Isi kredensial database lokal sesuai lingkungan. Saat ini nilai koneksi ditulis langsung di file konfigurasi; jangan gunakan atau publikasikan kredensial lokal sebagai kredensial produksi.
+3. Isi kredensial database untuk lingkungan lokal; contoh di bawah membaca kredensial dari environment variable agar rahasia tidak tersimpan di source code.
 4. Tambahkan helper untuk escaping HTML, redirect, tanggal layanan, dan respons JSON.
 5. Tambahkan CSRF token untuk form dan request perubahan data.
+
+Contoh `config/app.php` untuk waktu Jakarta dan cookie session:
+
+```php
+<?php
+date_default_timezone_set('Asia/Jakarta');
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_strict_mode', '1');
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    session_start();
+}
+```
+
+Contoh koneksi `config/database.php` memakai environment variable supaya password tidak ditulis di source code:
+
+```php
+<?php
+require_once __DIR__ . '/app.php';
+
+function getDBConnection(): PDO
+{
+    static $pdo = null;
+    if ($pdo instanceof PDO) return $pdo;
+
+    $host = getenv('DOSQUEUE_DB_HOST') ?: '127.0.0.1';
+    $name = getenv('DOSQUEUE_DB_NAME') ?: 'antrian_db';
+    $user = getenv('DOSQUEUE_DB_USER') ?: 'root';
+    $pass = getenv('DOSQUEUE_DB_PASS') ?: '';
+    $dsn = "mysql:host={$host};dbname={$name};charset=utf8mb4";
+
+    $pdo = new PDO($dsn, $user, $pass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ]);
+    $pdo->exec("SET time_zone = '+07:00'");
+    return $pdo;
+}
+```
+
+Sebelum menjalankan PHP, isi `DOSQUEUE_DB_HOST`, `DOSQUEUE_DB_NAME`, `DOSQUEUE_DB_USER`, dan `DOSQUEUE_DB_PASS` di lingkungan terminal/server. Di shell Bash, variabel dapat diberikan untuk proses lokal seperti ini:
+
+```sh
+DOSQUEUE_DB_HOST=127.0.0.1 DOSQUEUE_DB_NAME=antrian_db \
+DOSQUEUE_DB_USER=root DOSQUEUE_DB_PASS='' php -S 127.0.0.1:8000
+```
+
+Helper dasar di `includes/helpers.php`:
+
+```php
+<?php
+function e(?string $value): string
+{
+    return htmlspecialchars((string)$value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+}
+
+function jsonResponse(bool $success, string $message, array $data = [], int $status = 200): void
+{
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => $success,
+        'message' => $message,
+        'data' => $data,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+```
+
+CSRF token dibuat satu kali per session, ditampilkan pada halaman dan diverifikasi pada setiap request yang mengubah data:
+
+```php
+<?php
+require_once __DIR__ . '/../config/app.php';
+
+function getCsrfToken(): string
+{
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function csrfInput(): string
+{
+    return '<input type="hidden" name="csrf_token" value="'
+        . htmlspecialchars(getCsrfToken(), ENT_QUOTES, 'UTF-8') . '">';
+}
+
+function verifyCsrfToken(): bool
+{
+    $sent = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+    return is_string($sent)
+        && !empty($_SESSION['csrf_token'])
+        && hash_equals($_SESSION['csrf_token'], $sent);
+}
+```
 
 ## Tahap 5 — Buat autentikasi dan aturan antrean
 
@@ -150,6 +300,102 @@ Di `includes/functions.php`, pisahkan logika database dari halaman:
 
 Gunakan prepared statements untuk input database dan transaksi untuk operasi yang harus konsisten, khususnya pembuatan dan perubahan status tiket.
 
+Contoh fungsi login yang dapat ditempatkan di `includes/auth.php`. Fungsi ini mengambil hash dari database, memverifikasi password, memeriksa status akun, lalu mengganti session ID:
+
+```php
+function attemptLogin(string $username, string $password): bool
+{
+    $pdo = getDBConnection();
+    $stmt = $pdo->prepare(
+        'SELECT id, name, username, password, role, is_active FROM users WHERE username = :username LIMIT 1'
+    );
+    $stmt->execute(['username' => trim($username)]);
+    $user = $stmt->fetch();
+
+    if (!$user || !(int)$user['is_active'] || !password_verify($password, $user['password'])) {
+        return false;
+    }
+
+    session_regenerate_id(true);
+    $_SESSION['user_id'] = (int)$user['id'];
+    $_SESSION['user_name'] = $user['name'];
+    $_SESSION['role'] = $user['role'];
+    $_SESSION['logged_in'] = true;
+    return true;
+}
+
+function isStaffLoggedIn(): bool
+{
+    return !empty($_SESSION['logged_in'])
+        && in_array($_SESSION['role'] ?? '', ['petugas', 'admin'], true);
+}
+```
+
+Di `includes/functions.php`, mulai dengan fungsi membaca gelombang dan pemakaian kuota. Kondisi tanggal layanan dan tiket yang belum diarsipkan harus ikut dalam hitungan:
+
+```php
+function getActiveWavesWithQuota(): array
+{
+    $pdo = getDBConnection();
+    $stmt = $pdo->prepare("SELECT w.id, w.wave_name, w.start_time, w.end_time, w.quota,
+            COUNT(t.id) AS used_quota
+        FROM waves w
+        LEFT JOIN tickets t ON t.wave_id = w.id
+            AND t.service_date = :service_date AND t.deleted_at IS NULL
+        WHERE w.is_active = 1
+        GROUP BY w.id, w.wave_name, w.start_time, w.end_time, w.quota
+        ORDER BY w.start_time, w.id");
+    $stmt->execute(['service_date' => date('Y-m-d')]);
+    return $stmt->fetchAll();
+}
+```
+
+Pembuatan tiket perlu transaksi. Berikut contoh inti: kunci baris gelombang saat memeriksa kuota, tentukan nomor berikutnya, pilih ruang secara bergiliran, lalu simpan tiket. Constraint unik di database tetap menjadi perlindungan tambahan saat ada request bersamaan.
+
+```php
+function createQueueTicket(int $waveId): array
+{
+    $pdo = getDBConnection();
+    $date = date('Y-m-d');
+    try {
+        $pdo->beginTransaction();
+        $waveStmt = $pdo->prepare('SELECT * FROM waves WHERE id = ? AND is_active = 1 FOR UPDATE');
+        $waveStmt->execute([$waveId]);
+        $wave = $waveStmt->fetch();
+        if (!$wave) throw new RuntimeException('Gelombang tidak tersedia.');
+
+        $count = $pdo->prepare("SELECT COUNT(*) FROM tickets
+            WHERE wave_id = ? AND service_date = ? AND deleted_at IS NULL");
+        $count->execute([$waveId, $date]);
+        $usedQuota = (int)$count->fetchColumn();
+        if ($usedQuota >= (int)$wave['quota']) throw new RuntimeException('Kuota gelombang penuh.');
+
+        $sequence = $pdo->prepare('SELECT COALESCE(MAX(queue_number), 0) + 1
+            FROM tickets WHERE wave_id = ? AND service_date = ?');
+        $sequence->execute([$waveId, $date]);
+        $number = (int)$sequence->fetchColumn();
+
+        $rooms = $pdo->query('SELECT id, room_name FROM rooms WHERE is_active = 1 ORDER BY id')->fetchAll();
+        if (!$rooms) throw new RuntimeException('Belum ada ruangan aktif.');
+        $room = $rooms[($number - 1) % count($rooms)];
+        $code = sprintf('G%d-%s-%03d', $waveId, str_replace('-', '', $date), $number);
+
+        $insert = $pdo->prepare("INSERT INTO tickets
+            (ticket_code, queue_number, service_date, wave_id, room_id, status, created_at)
+            VALUES (?, ?, ?, ?, ?, 'waiting', NOW())");
+        $insert->execute([$code, $number, $date, $waveId, $room['id']]);
+        $pdo->commit();
+        return ['success' => true, 'ticket_code' => $code, 'queue_number' => $number,
+            'room_name' => $room['room_name']];
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        return ['success' => false, 'message' => $error->getMessage()];
+    }
+}
+```
+
+Ini contoh pembelajaran untuk inti pembuatan tiket. Lengkapi dengan pencatatan tiket perangkat, pemeriksaan kuota sesuai aturan aplikasi, respons HTTP yang sesuai, logging error, serta pengujian request bersamaan sebelum dipakai operasional.
+
 ## Tahap 6 — Buat endpoint API
 
 Endpoint di folder `actions/` menjadi penghubung halaman dengan logika inti:
@@ -162,6 +408,32 @@ Endpoint di folder `actions/` menjadi penghubung halaman dengan logika inti:
 
 Batasi metode HTTP, validasi parameter, dan periksa CSRF pada request POST. Endpoint petugas juga harus memeriksa session serta penugasan, bukan hanya mengandalkan tombol yang ditampilkan di browser. Untuk tiap endpoint, susun alur yang sama: muat konfigurasi/helper, validasi request, panggil fungsi bisnis, tetapkan kode HTTP, lalu keluarkan JSON.
 
+Contoh endpoint `actions/create-ticket.php`:
+
+```php
+<?php
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/csrf.php';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    jsonResponse(false, 'Metode tidak diizinkan.', [], 405);
+}
+if (!verifyCsrfToken()) {
+    jsonResponse(false, 'Token keamanan tidak valid.', [], 403);
+}
+$waveId = filter_input(INPUT_POST, 'wave_id', FILTER_VALIDATE_INT);
+if (!$waveId || $waveId < 1) {
+    jsonResponse(false, 'Gelombang tidak valid.', [], 400);
+}
+$result = createQueueTicket($waveId);
+if (!$result['success']) {
+    jsonResponse(false, $result['message'], [], 409);
+}
+jsonResponse(true, 'Tiket berhasil dibuat.', $result, 201);
+```
+
+Jangan menerima `room_id`, status, atau identitas petugas sebagai bukti hak akses dari browser. Server mengambil identitas dari session dan menguji ulang penugasan serta status tiket dari database.
+
 ## Tahap 7 — Buat pengalaman pengunjung
 
 Di `user/index.php`, tampilkan gelombang aktif, jam sesi, dan kuota. Saat pengunjung memilih gelombang, kirim `wave_id` ke endpoint pembuatan tiket dan arahkan ke halaman hasil dengan kode tiket.
@@ -169,6 +441,45 @@ Di `user/index.php`, tampilkan gelombang aktif, jam sesi, dan kuota. Saat pengun
 Di `user/ticket-result.php`, tampilkan kode dan status tiket, ruangan, gelombang, nomor yang sedang dilayani, serta jumlah antrean di depan jika status masih menunggu. Poll status secara berkala; saat dipanggil tampilkan pemberitahuan, dan saat selesai tampilkan tampilan tiket grayscale serta opsi kembali mengambil tiket.
 
 `index.php` pada root mengarahkan pengunjung ke halaman pilih gelombang.
+
+Contoh pengarah root `index.php`:
+
+```php
+<?php
+require_once __DIR__ . '/config/app.php';
+header('Location: user/index.php');
+exit;
+```
+
+Contoh elemen halaman dan JavaScript untuk memanggil endpoint. Token CSRF dibuat di PHP lalu ditambahkan ke POST:
+
+```php
+<div id="waves">
+  <?php foreach ($waves as $wave): ?>
+    <button type="button" onclick="takeTicket(<?= (int)$wave['id'] ?>)">
+      <?= e($wave['wave_name']) ?> — sisa <?= (int)$wave['remaining_quota'] ?>
+    </button>
+  <?php endforeach; ?>
+</div>
+<p id="message" role="status"></p>
+<script>
+const csrfToken = <?= json_encode(getCsrfToken()) ?>;
+async function takeTicket(waveId) {
+  const body = new FormData();
+  body.append('wave_id', waveId);
+  body.append('csrf_token', csrfToken);
+  const response = await fetch('../actions/create-ticket.php', { method: 'POST', body });
+  const result = await response.json();
+  if (result.success) {
+    location.href = `ticket-result.php?code=${encodeURIComponent(result.data.ticket_code)}`;
+  } else {
+    document.querySelector('#message').textContent = result.message;
+  }
+}
+</script>
+```
+
+Saat menampilkan data dari server, escape teks HTML dengan `e()` atau gunakan `textContent` di JavaScript. Jangan memasukkan teks yang belum dipercaya langsung ke `innerHTML`.
 
 ## Tahap 8 — Buat halaman petugas
 
@@ -179,9 +490,56 @@ Di `user/ticket-result.php`, tampilkan kode dan status tiket, ruangan, gelombang
 5. Setelah panggilan berhasil, bacakan nomor antrean dengan Web Speech API bila browser mendukungnya.
 6. Buat `petugas/logout.php` untuk mengakhiri session.
 
+Form login sederhana mengirim username/password melalui POST, sedangkan halaman dashboard wajib memeriksa session sebelum menampilkan data:
+
+```php
+<!-- petugas/login.php -->
+<form method="post">
+  <?= csrfInput() ?>
+  <label>Username <input name="username" autocomplete="username" required></label>
+  <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+  <button type="submit">Masuk</button>
+</form>
+```
+
+```php
+<!-- Awal petugas/dashboard.php -->
+<?php
+require_once __DIR__ . '/../includes/functions.php';
+requireStaffPageAuth();
+?>
+<h1>Dashboard Petugas</h1>
+<p>Halo, <?= e($_SESSION['user_name'] ?? '') ?></p>
+```
+
+Untuk mengubah status, endpoint memeriksa login, CSRF, dan hak petugas terhadap tiket sebelum menjalankan query. Pola request dari browser:
+
+```js
+async function postStaffAction(url, ticketId, csrfToken) {
+  const body = new FormData();
+  body.append('ticket_id', ticketId);
+  body.append('csrf_token', csrfToken);
+  const response = await fetch(url, { method: 'POST', body });
+  return response.json();
+}
+```
+
 ## Tahap 9 — Tambahkan desain dan interaksi
 
 Gunakan CSS untuk membedakan antrean menunggu, dipanggil, selesai, kuota tersedia, dan kuota penuh. Pastikan tabel dan tombol mudah digunakan saat operasional serta tetap terbaca di layar kecil. Pisahkan stylesheet berdasarkan halaman, seperti `assets/css/index-guest.css`, `assets/css/ticket-result.css`, `assets/css/login-petugas.css`, dan stylesheet dashboard di `assets/css/`. Letakkan ikon, font, dan gambar di subfolder `assets/` yang sesuai. JavaScript halaman menangani pengambilan data, polling, pesan kesalahan, konfirmasi aksi, dan pembacaan nomor menggunakan Web Speech API.
+
+Contoh stylesheet dasar responsif:
+
+```css
+:root { font-family: Arial, sans-serif; color: #202020; background: #f4f4f4; }
+body { margin: 0; padding: 1.5rem; }
+.panel { max-width: 60rem; margin: auto; padding: 1.25rem; background: #fff; border: 1px solid #ddd; }
+button { min-height: 2.75rem; padding: .5rem 1rem; cursor: pointer; }
+.status-waiting { color: #805b00; }
+.status-called { color: #12653c; font-weight: 700; }
+.status-completed { color: #555; }
+@media (max-width: 600px) { body { padding: .75rem; } table { display: block; overflow-x: auto; } }
+```
 
 ## Tahap 10 — Jalankan website secara lokal
 
@@ -192,6 +550,14 @@ php -S 127.0.0.1:8000
 ```
 
 Buka `http://127.0.0.1:8000/`. Jika ada kegagalan koneksi, periksa nama database, user/password lokal, server database, dan ekstensi `pdo_mysql`.
+
+Jika membuat database lewat file SQL, jalankan dari terminal:
+
+```sh
+mysql -u root -p < database/antrian_db.sql
+```
+
+Pastikan kredensial database sudah tersedia untuk proses PHP sebelum membuka halaman.
 
 ## Tahap 11 — Periksa alur dari awal sampai selesai
 
