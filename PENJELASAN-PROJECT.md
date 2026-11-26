@@ -63,6 +63,20 @@ Pengguna → Halaman HTML/JavaScript → actions/*.php
 6. Baris tiket berstatus `waiting` disimpan; kode tiket diikat ke session/cookie perangkat pengunjung.
 7. API mengembalikan JSON dengan nomor dan kode tiket. Browser membuka halaman hasil tiket.
 
+### Pembagian ruangan dengan round-robin
+
+Round-robin adalah pola penjadwalan siklik: setiap giliran diberikan secara bergantian ke anggota dalam daftar, lalu urutan kembali ke anggota pertama. Artikel [Round-Robin Scheduling dari BINUS @Malang](https://binus.ac.id/malang/2021/11/round-robin-scheduling/) menjelaskan pola ini dalam konteks penjadwalan proses CPU, yaitu proses mendapat giliran berurutan dan siklus berulang. DosQueue menerapkan gagasan giliran bergantian yang sama untuk membagi **tiket ke ruangan aktif**. Jadi, di project ini round-robin tidak membagi waktu pelayanan atau menetapkan *time quantum* CPU.
+
+Saat tiket dibuat, `createQueueTicket()` mengambil ruangan aktif menurut urutan ID, menghitung nomor antrean berikutnya untuk gelombang dan tanggal layanan tersebut, lalu menentukan indeks ruangan dengan rumus:
+
+```text
+indeks_ruangan = (nomor_antrean - 1) MOD jumlah_ruangan_aktif
+```
+
+`MOD` menghasilkan sisa pembagian, sehingga indeksnya berputar dari awal daftar setelah mencapai ruangan terakhir. Contohnya, jika ada tiga ruangan aktif berurutan A, B, dan C, tiket bernomor 1, 2, 3, 4, 5, 6 akan dibagikan ke A, B, C, A, B, C. Rumus yang sama diterapkan ulang untuk setiap kombinasi gelombang dan tanggal layanan karena nomor antrean dihitung dalam lingkup tersebut.
+
+Pembagian ini menyeimbangkan **jumlah tiket yang dialokasikan** ke ruangan selama urutan tiket berjalan. Ini tidak menjamin waktu tunggu atau beban kerja aktual setiap ruangan sama, sebab durasi pelayanan dan ketersediaan petugas dapat berbeda. Setelah dialokasikan, tiket tetap dilayani oleh petugas sesuai penugasan ruangannya; urutan nomor pada antrean ruangan mengikuti aturan FIFO yang terpisah dari pembagian round-robin.
+
 ### Contoh alur pemantauan dan petugas
 
 Halaman `user/ticket-result.php` memanggil `actions/get-ticket-status.php` secara berkala (sekitar setiap 4 detik). Server mencari tiket, status, ruangan, gelombang, serta informasi antrean terkait, lalu mengirimkannya sebagai JSON. JavaScript memperbarui status di halaman. Ini disebut *short polling*: browser bertanya berulang dalam jeda waktu tertentu; bukan koneksi real-time yang terus terbuka.
